@@ -4,6 +4,7 @@ import userSVG from '@/assets/user.svg';
 import { Title } from './Title';
 import { cn } from '@/lib/utils';
 import { Button, Input } from '@/components/ui';
+import { Message, MessageType } from './Message';
 
 type ChatProps = {
   className?: string;
@@ -23,6 +24,7 @@ export const Chat: FC<ChatProps> = ({ className }) => {
   return (
     <div className={cn('flex flex-col', className)}>
       <ChatHeader />
+
       <ChatBody messageText={messageText} handleMessageTextChange={setMessageText} onMessageSent={sendMessage} />
     </div>
   );
@@ -47,8 +49,19 @@ const ChatHeader: FC = () => {
 
 const ChatBody: FC<ChatBodyProps> = ({ messageText, handleMessageTextChange, onMessageSent }) => {
   return (
-    <div className="bg-gray-300 py-5 pl-5 rounded-es-md pr-10 rounded">
-      <div className="flex gap-3 itemc-center">
+    <div className="bg-gray-300 p-5 rounded-es-md">
+      <div className="h-[400px] overflow-auto flex flex-col gap-5 pr-5">
+        <Message type={MessageType.received} />
+        <Message type={MessageType.sent} />
+        <Message type={MessageType.received} />
+        <Message type={MessageType.sent} />
+        <Message type={MessageType.received} />
+        <Message type={MessageType.sent} />
+        <Message type={MessageType.received} />
+        <Message type={MessageType.sent} />
+      </div>
+
+      <div className="flex gap-3 items-center mt-5">
         <Input
           className="flex-1"
           value={messageText}
