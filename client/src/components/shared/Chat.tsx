@@ -1,10 +1,11 @@
-import { FC, useState } from 'react';
+import { FC, useEffect, useState } from 'react';
 
 import userSVG from '@/assets/user.svg';
 import { Title } from './Title';
 import { cn } from '@/lib/utils';
 import { Button, Input } from '@/components/ui';
 import { Message, MessageType } from './Message';
+import { useSocket } from '@/contexts/SocketContext';
 
 type ChatProps = {
   className?: string;
@@ -17,9 +18,36 @@ type ChatBodyProps = {
 };
 
 export const Chat: FC<ChatProps> = ({ className }) => {
+  const socket = useSocket();
+
   const [messageText, setMessageText] = useState<string>('');
+  const [messages, setMessages] = useState<any>([]);
+  const [userId, setUserId] = useState<any>(null);
 
   const sendMessage = () => {};
+
+  useEffect(() => {
+    // Generate or get userId from session storage
+    // let storedUserId = sessionStorage.getItem('userId');
+    // if (!storedUserId) {
+    //   storedUserId = Math.random().toString(36).substring(7);
+    //   sessionStorage.setItem('userId', storedUserId);
+    // }
+    // setUserId(storedUserId);
+    socket?.on('connect', () => {
+      console.log('Connected');
+    });
+
+    socket?.on('receiveMessage', (message) => {
+      console.log(message);
+      setMessages((prevMessages: any) => [...prevMessages, message]);
+    });
+
+    return () => {
+      socket?.off('receiveMessage');
+      socket?.off('connect');
+    };
+  }, [socket]);
 
   return (
     <div className={cn('flex flex-col', className)}>
