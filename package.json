@@ -2,7 +2,7 @@
     "name": "codefinity-test",
     "version": "1.0.0",
     "scripts": {
-        "init": "npm install && npm install --prefix backend && yarn install --cwd client && npm run start",
+        "init": "npm install && npm install --prefix backend && yarn --cwd client || npm install --prefix client",
         "start": "concurrently \"cd backend && npm run dev\" \"cd client && yarn dev\""
     },
     "keywords": [],
