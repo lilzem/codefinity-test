@@ -1,16 +1,23 @@
 import express, { Application } from "express";
-import { Server } from "socket.io";
 import bodyParser from "body-parser";
 import { createServer } from "http";
 import cors from "cors";
+import path from "path";
 
 import Storage from "./storage";
-import User from "./Models/User";
 import { Model } from "./Models/Model";
-import { PORT } from "./config";
 import App from "./routes/index";
+import { PORT } from "./config/index";
+import { initIO } from "./sockets/index";
+import { initBots } from "./bots";
 
 const app: Application = express();
+
+const storage = new Storage(["users", "messages"]);
+Model.init(storage);
+
+// initializeBots();
+initBots();
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -19,48 +26,19 @@ app.use(
         origin: "*",
     })
 );
-app.disable("x-powered-by"); //Reduce fingerprinting
+app.disable("x-powered-by");
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
+app.use(
+    "/public/avatars",
+    express.static(path.join(process.cwd(), "public/avatars"))
+);
 
 app.use(App);
 
 const server = createServer(app);
 
-const io = new Server(server, {
-    cors: {
-        origin: "http://localhost:5173",
-        methods: ["GET", "POST"],
-    },
-});
-
-const storage = new Storage(["users", "messages"]);
-Model.init(storage);
-
-io.on("connection", (socket) => {
-    console.log("A user connected:", socket.id);
-
-    const user = new User();
-    user.name = "aboba";
-    user.avatar = "not exist";
-    user.createdAt = Date.now();
-    user.socketId = socket.id;
-    user.create();
-
-    console.log(user);
-
-    console.log(storage.get("users"));
-
-    socket.emit("getUsers");
-
-    socket.on("sendMessage", (message) => {
-        io.emit("receiveMessage", message);
-    });
-
-    socket.on("disconnect", () => {
-        console.log("A user disconnected");
-    });
-});
+initIO(server);
 
 server.listen(PORT, () => {
     console.log(`Server is Fire at http://localhost:${PORT}`);

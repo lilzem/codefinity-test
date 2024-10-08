@@ -1,4 +1,4 @@
-import { Changes, Model } from "./Models/Model";
+import { Model } from "./Models/Model";
 
 export type ModelArray = Model[];
 
@@ -17,13 +17,32 @@ export default class Storage {
         return this.#entities.get(key);
     }
 
-    find(key: string, id: number | string): Model | undefined {
-        return this.get(key)?.find(
-            (model: Model) => model.id || model.name === id
-        );
+    find(key: string, id: number): Model | undefined {
+        return this.get(key)?.find((model: Model) => model.id === id);
     }
 
-    update(key: string, id: number, changes: Changes): boolean {
+    firstWhere(
+        key: string,
+        field: string,
+        operator: string,
+        value: any
+    ): Model | undefined {
+        return this.#entities.get(key)?.find((entity) => {
+            const entityValue = entity[field];
+
+            if (!entityValue) {
+                return false;
+            }
+
+            return eval(`entityValue ${operator} value`);
+        });
+    }
+
+    update<T extends Model>(
+        key: string,
+        id: number,
+        changes: Partial<T>
+    ): boolean {
         const models = this.get(key);
 
         if (!models) {
@@ -38,17 +57,15 @@ export default class Storage {
             return false;
         }
 
-        const updated = models[updatedIndex];
-        models.splice(updatedIndex, 1);
-        updated.fill(changes);
+        models[updatedIndex].fill(changes);
 
-        this.#entities.set(key, [...models, updated]);
+        this.#entities.set(key, models);
 
         return true;
     }
 
     create(key: string, model: Model): Model | false {
-        if (this.find(key, model.id)) {
+        if (model.id && this.find(key, model.id)) {
             return false;
         }
 

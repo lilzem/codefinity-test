@@ -5,6 +5,7 @@ type Props = {
   className?: string;
   value: string;
   handleChange: (v: string) => void;
+  onKeyDown?: (e: any) => void;
   placeholder: string;
 };
 

@@ -1,34 +1,45 @@
 import Storage from "../storage";
 
-export interface IModel {
-    getStorageKey(): string;
-}
-
-export type Changes = Map<string, any>;
-
 export abstract class Model {
     id!: number;
 
     [key: string]: any;
 
-    static Storage: Storage;
+    private static storage: Storage;
 
-    abstract getStorageKey(): string;
+    protected abstract get storageKey(): string;
 
     static init(storage: Storage) {
-        Model.Storage = storage;
+        Model.storage = storage;
     }
 
-    find(id: number): Model | undefined {
-        return Model.Storage.find(this.getStorageKey(), id);
+    static find<T extends Model>(this: new () => T, id: number): T | undefined {
+        const instance = new this();
+        return Model.storage.find(instance.storageKey, id) as T;
     }
 
-    update(changes: Changes): boolean {
-        const result = Model.Storage.update(
-            this.getStorageKey(),
-            this.id,
-            changes
-        );
+    static all<T extends Model>(this: new () => T): T[] | undefined {
+        const instance = new this();
+        return Model.storage.get(instance.storageKey) as T[];
+    }
+
+    static firstWhere<T extends Model>(
+        this: new () => T,
+        field: string,
+        operator: string,
+        value: any
+    ): T | undefined {
+        const instance = new this();
+        return Model.storage.firstWhere(
+            instance.storageKey,
+            field,
+            operator,
+            value
+        ) as T;
+    }
+
+    update<T extends Model>(changes: Partial<new () => T>): boolean {
+        const result = Model.storage.update(this.storageKey, this.id, changes);
 
         if (!result) {
             return false;
@@ -40,7 +51,7 @@ export abstract class Model {
     }
 
     create(): Model | false {
-        const result = Model.Storage.create(this.getStorageKey(), this);
+        const result = Model.storage.create(this.storageKey, this);
 
         if (!result) {
             return false;
@@ -51,13 +62,15 @@ export abstract class Model {
         return this;
     }
 
-    all(): Model[] | undefined {
-        return Model.Storage.get(this.getStorageKey());
-    }
-
-    fill(changes: Changes): Model {
-        changes.forEach((value: Model, key: string) => (this[key] = value));
+    fill<T extends Model>(changes: Partial<new () => T>): Model {
+        Object.entries(changes).forEach(([key, value]) => {
+            this[key] = value;
+        });
 
         return this;
+    }
+
+    exists(): boolean {
+        return this.id !== undefined;
     }
 }

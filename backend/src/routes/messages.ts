@@ -1,9 +1,17 @@
+//@ts-nocheck
+
 import express from "express";
-import { getAllMessages, sendMessage } from "../controllers/messages";
+import {
+    getAllMessages,
+    getMessages,
+    sendMessage,
+} from "../controllers/messages";
+import AuthMiddleware from "../middleware/auth";
 
 const router = express.Router();
 
-router.get("/messages", getAllMessages);
-router.post("/messages", sendMessage);
+router.get("/:id", AuthMiddleware, getMessages);
+router.post("/", AuthMiddleware, sendMessage);
+router.get("/", AuthMiddleware, getAllMessages);
 
 export default router;

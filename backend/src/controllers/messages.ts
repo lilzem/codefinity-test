@@ -1,67 +1,47 @@
-import express, { RequestHandler, Response } from "express";
+import { Request, Response } from "express";
 import User from "../Models/User";
 import Message from "../Models/Message";
+import { AuthenticatedRequest } from "../middleware/auth";
+import { handleMessage } from "../bots";
+import { sendMessageToUser } from "../services/messages";
 
-// Define the expected types for request bodies
-interface PostMessageRequestBody {
-    text: string;
-    receiverId: number;
-    senderId: number;
-}
-
-// Post a new message
-//@ts-ignore
-export const sendMessage: RequestHandler<
-    {},
-    {},
-    PostMessageRequestBody
-> = async (req, res): Promise<Response> => {
-    const { text, receiverId, senderId } = req.body;
-
-    // Ensure sender and receiver exist
-    const sender = User.Storage.find("users", senderId);
-    const receiver = User.Storage.find("users", receiverId);
-
-    if (!sender || !receiver) {
+export const sendMessage = (req: AuthenticatedRequest, res: Response) => {
+    const { text, receiverId } = req.body;
+    const receiver = User.find(receiverId);
+    if (!receiver) {
         return res.status(400).json({ message: "Invalid sender or receiver" });
     }
 
-    // Create a new message instance
-    const message = new Message();
-    message.text = text;
-    message.receiverId = receiverId;
-    message.senderId = senderId;
-    message.createdAt = Date.now();
+    const message = sendMessageToUser(
+        text,
+        req.user?.id as number,
+        receiver.id
+    );
 
-    const result = message.create(); // Store message in Storage
-
-    if (!result) {
+    if (!message) {
         return res.status(500).json({ message: "Message creation failed" });
     }
 
-    return res
-        .status(201)
-        .json({ message: "Message sent successfully", messageId: message.id });
+    handleMessage(message);
+
+    return res.status(201).json(message);
 };
 
-// Get all messages
-//@ts-ignore
-export const getAllMessages: RequestHandler = async (
-    req,
-    res
-): Promise<Response> => {
-    const token = req.headers.authorization?.split(" ")[1];
+export const getMessages = (req: AuthenticatedRequest, res: Response) => {
+    const _id = req.user?.id;
+    const id = +req.params.id;
 
-    if (!token) {
-        return res.status(401).json({ message: "Unauthorized" });
-    }
+    const messages = Message.all()?.filter(
+        ({ senderId, receiverId }) =>
+            (senderId === id || receiverId === id) &&
+            (senderId === _id || receiverId === _id)
+    );
 
-    // Verify JWT token
-    const decoded = User.verifyJwt(token);
-    if (!decoded) {
-        return res.status(401).json({ message: "Invalid token" });
-    }
+    return res.status(200).json(messages);
+};
 
-    const messages = Message.Storage.get("message");
+export const getAllMessages = (req: AuthenticatedRequest, res: Response) => {
+    const messages = Message.all();
+
     return res.status(200).json(messages);
 };

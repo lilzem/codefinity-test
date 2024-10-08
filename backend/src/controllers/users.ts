@@ -1,54 +1,40 @@
-import { RequestHandler } from "express";
+import { RequestHandler, Response } from "express";
 import User from "../Models/User";
+import { AuthenticatedRequest } from "../middleware/auth";
+import Message from "../Models/Message";
 
-interface UserParams {
-    id: string; // ID will be passed as a string in the URL
-}
+export const getAllUsers = (req: AuthenticatedRequest, res: Response) => {
+    const users = User.all()?.filter((user) => user.id !== req.user?.id) ?? [];
 
-// Get all users
-//@ts-ignore
-export const getAllUsers: RequestHandler = (req, res): Promise<> => {
-    const token = req.headers.authorization?.split(" ")[1];
+    const usersWithLastMessage = users.map((user) => {
+        const messages =
+            Message.all()?.filter(
+                (message) =>
+                    message.senderId === user.id ||
+                    message.receiverId === user.id
+            ) ?? [];
 
-    if (!token) {
-        return res.status(401).json({ message: "Unauthorized" });
-    }
+        const lastMessage = messages.sort(
+            (a, b) => b.createdAt - a.createdAt
+        )[0];
 
-    // Verify JWT token
-    const decoded = User.verifyJwt(token);
-    if (!decoded) {
-        return res.status(401).json({ message: "Invalid token" });
-    }
+        return {
+            ...user,
+            lastMessage: lastMessage ?? null,
+        };
+    });
 
-    const users = User.Storage.get("users");
-    res.status(200).json(users);
+    return res.status(200).json(usersWithLastMessage);
 };
 
-// Get a specific user by ID
-export const getUserById: RequestHandler<UserParams> = (
-    req,
-    res
-    //@ts-ignore
-): Promise<> => {
-    const { id } = req.params; // Get the 'id' parameter from the URL
+export const getUserById = (req: AuthenticatedRequest, res: Response) => {
+    const { id } = req.params;
 
-    const token = req.headers.authorization?.split(" ")[1];
-
-    if (!token) {
-        return res.status(401).json({ message: "Unauthorized" });
-    }
-
-    // Verify JWT token
-    const decoded = User.verifyJwt(token);
-    if (!decoded) {
-        return res.status(401).json({ message: "Invalid token" });
-    }
-
-    const user = User.Storage.find("users", Number(id));
+    const user = User.find(Number(id));
 
     if (!user) {
         return res.status(404).json({ message: "User not found" });
     }
 
-    res.status(200).json(user);
+    return res.status(200).json(user);
 };
